@@ -31,7 +31,7 @@ SUPPLIER_FILE = "supplier_info.txt"
 INBOUND_FILE = "inbound_record.txt"
 OUTBOUND_FILE = "outbound_record.txt"
 
-# 数据加载与保存（通用函数） 
+# 数据加载与保存（通用函数） 马
 def load_data(filename, default_data):
     """加载JSON数据文件，若不存在则创建并返回默认数据"""
     if not os.path.exists(filename):
@@ -270,7 +270,52 @@ def bar_chart():
     plt.show()
     print("图表窗口已关闭")
 
-# ================== 7. 导出查询结果（扩展） ==================
+# ================== 7. 打开可视化仪表盘 ==================
+def open_dashboard():
+    """动态读取最新数据文件，注入 HTML 模板后在浏览器中打开"""
+    import webbrowser
+
+    template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "warehouse_dashboard.html")
+    if not os.path.exists(template_path):
+        print("未找到 warehouse_dashboard.html 模板，请确保该文件存在于程序目录中。")
+        return
+
+    # 1. 读取最新数据文件
+    products = load_data(PRODUCT_FILE, [])
+    categories = load_data(CATEGORY_FILE, [])
+    suppliers = load_data(SUPPLIER_FILE, [])
+    inbound_records = load_data(INBOUND_FILE, [])
+    outbound_records = load_data(OUTBOUND_FILE, [])
+
+    # 2. 将数据序列化为 JS 变量声明
+    data_js = (
+        "const products = " + json.dumps(products, ensure_ascii=False) + ";\n"
+        "        const categories = " + json.dumps(categories, ensure_ascii=False) + ";\n"
+        "        const suppliers = " + json.dumps(suppliers, ensure_ascii=False) + ";\n"
+        "        const inboundRecords = " + json.dumps(inbound_records, ensure_ascii=False) + ";\n"
+        "        const outboundRecords = " + json.dumps(outbound_records, ensure_ascii=False) + ";"
+    )
+
+    # 3. 读取 HTML 模板，替换占位符
+    with open(template_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+
+    if "__DATA_PLACEHOLDER__" not in html_content:
+        print("模板中未找到 __DATA_PLACEHOLDER__ 占位符，请检查 HTML 文件。")
+        return
+
+    html_content = html_content.replace("__DATA_PLACEHOLDER__", data_js)
+
+    # 4. 写入临时 HTML 文件
+    temp_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_dashboard_temp.html")
+    with open(temp_path, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+    print("\n正在浏览器中打开可视化仪表盘（已加载最新数据）...")
+    webbrowser.open("file://" + temp_path)
+    print("仪表盘已打开，请在浏览器中查看。")
+
+# ================== 8. 导出查询结果（扩展） ==================
 def export_to_file(data, filename, headers):
     """将数据导出到txt文件"""
     with open(filename, 'w', encoding='utf-8') as f:
@@ -290,7 +335,8 @@ def query_menu():
         print("3. 库存范围查询")
         print("4. 收发存汇总表")
         print("5. 库存预警")
-        print("6. 库存数量柱状图（可视化）")
+        print("6. 库存数量柱状图（matplotlib）")
+        print("7. 打开可视化仪表盘（柱状图+饼状图）")
         print("0. 返回主菜单")
         print("=" * 40)
         
@@ -313,6 +359,8 @@ def query_menu():
             stock_warning()
         elif choice == "6":
             bar_chart()
+        elif choice == "7":
+            open_dashboard()
         elif choice == "0":
             break
         else:

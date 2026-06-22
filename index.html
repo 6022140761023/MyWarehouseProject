@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拍现象（Beats）物理演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 顶部标题区 */
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #333;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #00d4ff, #ff00aa, #00d4ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+            100% { background-position: 0% center; }
+        }
+
+        .beat-display {
+            font-size: 1.8em;
+            color: #ff6b6b;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+            margin-top: 10px;
+        }
+
+        .formula {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-top: 8px;
+            font-family: 'Times New Roman', serif;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 140px;
+        }
+
+        .control-group label {
+            color: #00d4ff;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .control-group .value {
+            color: #ffaa00;
+            font-size: 1.1em;
+            margin-bottom: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="range"] {
+            width: 130px;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00d4ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #fff;
+        }
+
+        .btn-play:hover {
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #ff6b6b, #cc4444);
+            color: #fff;
+        }
+
+        .btn-reset:hover {
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* 波形图区域 */
+        .waveform-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wave-container {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #222;
+            position: relative;
+        }
+
+        .wave-title {
+            color: #aaa;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .wave-title .formula-inline {
+            font-family: 'Times New Roman', serif;
+            color: #888;
+        }
+
+        canvas {
+            width: 100%;
+            height: 140px;
+            border-radius: 8px;
+            background: #050505;
+        }
+
+        /* 呼吸灯 */
+        .breath-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 15px;
+            border: 1px solid #222;
+            margin-bottom: 20px;
+        }
+
+        .breath-label {
+            color: #00d4ff;
+            font-size: 1em;
+        }
+
+        .breath-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 100, 100, 0.8), rgba(100, 100, 255, 0.3));
+            box-shadow: 0 0 30px rgba(255, 100, 100, 0.5);
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #fff;
+        }
+
+        .breath-info {
+            color: #888;
+            font-size: 0.85em;
+            max-width: 200px;
+        }
+
+        /* 预设按钮 */
+        .preset-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            padding: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            color: #ccc;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85em;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        /* 音频控制 */
+        .audio-section {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid #222;
+            margin-bottom: 20px;
+        }
+
+        .audio-btn {
+            background: linear-gradient(135deg, #aa44ff, #6600cc);
+            color: #fff;
+            padding: 12px 30px;
+            font-size: 1em;
+        }
+
+        .audio-btn:hover {
+            box-shadow: 0 0 25px rgba(170, 68, 255, 0.4);
+        }
+
+        .audio-status {
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 8px;
+        }
+
+        /* 底部信息 */
+        .footer-info {
+            text-align: center;
+            color: #555;
+            font-size: 0.8em;
+            padding: 20px;
+            border-top: 1px solid #222;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 标题区 -->
+        <div class="header">
+            <h1>拍现象（Beats）物理演示</h1>
+            <div class="beat-display" id="beatDisplay">拍频 f<sub>beat</sub> = |f₂ - f₁| = 1.00 Hz</div>
+            <div class="formula">
+                x = x₁ + x₂ = 2A·cos[π(f₂-f₁)t]·cos[π(f₂+f₁)t + φ/2]
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="control-group">
+                <label>频率 f₁</label>
+                <div class="value" id="f1Value">5.0 Hz</div>
+                <input type="range" id="f1Slider" min="1" max="20" step="0.1" value="5">
+            </div>
+            <div class="control-group">
+                <label>频率 f₂</label>
+                <div class="value" id="f2Value">6.0 Hz</div>
+                <input type="range" id="f2Slider" min="1" max="20" step="0.1" value="6">
+            </div>
+            <div class="control-group">
+                <label>振幅 A</label>
+                <div class="value" id="aValue">1.0</div>
+                <input type="range" id="aSlider" min="0.5" max="2" step="0.1" value="1">
+            </div>
+            <div class="control-group">
+                <label>相位差 φ</label>
+                <div class="value" id="phiValue">0.00 rad</div>
+                <input type="range" id="phiSlider" min="0" max="6.28" step="0.01" value="0">
+            </div>
+            <div class="btn-group">
+                <button class="btn-play" id="playBtn">⏸ 暂停</button>
+                <button class="btn-reset" id="resetBtn">↺ 重置</button>
+            </div>
+        </div>
+
+        <!-- 波形图 -->
+        <div class="waveform-area">
+            <div class="wave-container">
+                <div class="wave-title">
+                    <span style="color:#4488ff">●</span>
+                    分振动 x₁ = A·cos(2πf₁t)
+                    <span class="formula-inline">f₁ = <span id="f1Display">5.0</span> Hz</span>
+                </div>
+                <canvas id="canvas1"></canvas>
+            </div>
+            <div class="wave-container">
+                <div class="wave-title">
+                    <span style="color:#44ff88">●</span>
+                    分振动 x₂ = A·cos(2πf₂t + φ)
+                    <span class="formula-inline">f₂ = <span id="f2Display">6.0</span> Hz, φ = <span id="phiDisplay">0.00</span> rad</span>
+                </div>
+                <canvas id="canvas2"></canvas>
+            </div>
+            <div class="wave-container">
+                <div class="wave-title">
+                    <span style="color:#ff4444">●</span>
+                    合成振动 x = x₁ + x₂
+                    <span class="formula-inline" style="color:#ffaa00">拍频 = <span id="beatFreqDisplay">1.00</span> Hz</span>
+                </div>
+                <canvas id="canvas3"></canvas>
+            </div>
+        </div>
+
+        <!-- 呼吸灯 -->
+        <div class="breath-section">
+            <div class="breath-label">合成振幅<br>实时可视化</div>
+            <div class="breath-circle" id="breathCircle">振幅</div>
+            <div class="breath-info">
+                圆的大小和颜色反映合成波的瞬时振幅包络。<br>
+                <span style="color:#ff6666">红色/大 = 强振幅</span><br>
+                <span style="color:#6666ff">蓝色/小 = 弱振幅</span>
+            </div>
+        </div>
+
+        <!-- 音频控制 -->
+        <div class="audio-section">
+            <button class="audio-btn" id="audioBtn">🔊 开启双音听觉演示</button>
+            <div class="audio-status" id="audioStatus">点击按钮，用耳朵感受拍频！（建议佩戴耳机）</div>
+        </div>
+
+        <!-- 预设场景 -->
+        <div class="preset-section">
+            <button class="preset-btn" data-f1="5" data-f2="6" data-a="1" data-phi="0">典型拍 (5/6 Hz)</button>
+            <button class="preset-btn" data-f1="10" data-f2="14" data-a="1" data-phi="0">快速拍 (10/14 Hz)</button>
+            <button class="preset-btn" data-f1="5" data-f2="5" data-a="1" data-phi="0">无拍 (5/5 Hz)</button>
+            <button class="preset-btn" data-f1="3" data-f2="3.5" data-a="1.5" data-phi="0">慢速拍 (3/3.5 Hz)</button>
+            <button class="preset-btn" data-f1="8" data-f2="8.2" data-a="1" data-phi="0">极慢拍 (8/8.2 Hz)</button>
+        </div>
+
+        <div class="footer-info">
+            2026 大学物理DI PBL作业 | 拍现象交互演示 | 使用 Canvas + Web Audio API 构建
+        </div>
+    </div>
+
+    <script>
+        // ==================== 物理参数 ====================
+        let f1 = 5.0;
+        let f2 = 6.0;
+        let A = 1.0;
+        let phi = 0.0;
+        let t = 0;
+        let isPlaying = true;
+        let dt = 0.005;
+
+        // ==================== Canvas 设置 ====================
+        const canvas1 = document.getElementById('canvas1');
+        const canvas2 = document.getElementById('canvas2');
+        const canvas3 = document.getElementById('canvas3');
+        const ctx1 = canvas1.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
+        const ctx3 = canvas3.getContext('2d');
+
+        function setupCanvas(canvas, ctx) {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { width: rect.width, height: rect.height };
+        }
+
+        let size1, size2, size3;
+
+        function initCanvases() {
+            size1 = setupCanvas(canvas1, ctx1);
+            size2 = setupCanvas(canvas2, ctx2);
+            size3 = setupCanvas(canvas3, ctx3);
+        }
+
+        initCanvases();
+        window.addEventListener('resize', initCanvases);
+
+        // ==================== 波形历史数据 ====================
+        const maxPoints = 800;
+        let history1 = [];
+        let history2 = [];
+        let history3 = [];
+        let envelopeHistory = [];
+
+        // ==================== 音频系统 ====================
+        let audioCtx = null;
+        let osc1 = null;
+        let osc2 = null;
+        let gain1 = null;
+        let gain2 = null;
+        let isAudioOn = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function startAudio() {
+            initAudio();
+            if (osc1) {
+                osc1.stop();
+            }
+            if (osc2) {
+                osc2.stop();
+            }
+
+            osc1 = audioCtx.createOscillator();
+            osc2 = audioCtx.createOscillator();
+            gain1 = audioCtx.createGain();
+            gain2 = audioCtx.createGain();
+
+            osc1.type = 'sine';
+            osc2.type = 'sine';
+            osc1.frequency.value = f1;
+            osc2.frequency.value = f2;
+
+            gain1.gain.value = 0.15;
+            gain2.gain.value = 0.15;
+
+            osc1.connect(gain1);
+            osc2.connect(gain2);
+            gain1.connect(audioCtx.destination);
+            gain2.connect(audioCtx.destination);
+
+            osc1.start();
+            osc2.start();
+            isAudioOn = true;
+        }
+
+        function stopAudio() {
+            if (osc1) {
+                osc1.stop();
+                osc1 = null;
+            }
+            if (osc2) {
+                osc2.stop();
+                osc2 = null;
+            }
+            isAudioOn = false;
+        }
+
+        function updateAudioFreq() {
+            if (osc1 && osc2) {
+                osc1.frequency.setValueAtTime(f1, audioCtx.currentTime);
+                osc2.frequency.setValueAtTime(f2, audioCtx.currentTime);
+            }
+        }
+
+        // ==================== 绘制函数 ====================
+        function drawWaveform(ctx, size, data, color, showEnvelope, envelopeData) {
+            const w = size.width;
+            const h = size.height;
+            const cy = h / 2;
+            const scaleY = (h * 0.35) / 2.5;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 绘制网格
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) {
+                const y = cy + (i - 2) * (h * 0.25);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // 绘制零线
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(0, cy);
+            ctx.lineTo(w, cy);
+            ctx.stroke();
+
+            // 绘制包络线（仅合成波）
+            if (showEnvelope && envelopeData.length > 1) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 5]);
+
+                // 上包络
+                ctx.beginPath();
+                for (let i = 0; i < envelopeData.length; i++) {
+                    const x = (i / (maxPoints - 1)) * w;
+                    const y = cy - envelopeData[i] * scaleY;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // 下包络
+                ctx.beginPath();
+                for (let i = 0; i < envelopeData.length; i++) {
+                    const x = (i / (maxPoints - 1)) * w;
+                    const y = cy + envelopeData[i] * scaleY;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // 绘制波形
+            if (data.length > 1) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                for (let i = 0; i < data.length; i++) {
+                    const x = (i / (maxPoints - 1)) * w;
+                    const y = cy - data[i] * scaleY;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // ==================== 主动画循环 ====================
+        function animate() {
+            if (isPlaying) {
+                t += dt;
+
+                const x1 = A * Math.cos(2 * Math.PI * f1 * t);
+                const x2 = A * Math.cos(2 * Math.PI * f2 * t + phi);
+                const x3 = x1 + x2;
+                const envelope = 2 * A * Math.abs(Math.cos(Math.PI * (f2 - f1) * t));
+
+                history1.push(x1);
+                history2.push(x2);
+                history3.push(x3);
+                envelopeHistory.push(envelope);
+
+                if (history1.length > maxPoints) {
+                    history1.shift();
+                    history2.shift();
+                    history3.shift();
+                    envelopeHistory.shift();
+                }
+
+                updateBreathCircle(envelope);
+            }
+
+            drawWaveform(ctx1, size1, history1, '#4488ff', false, []);
+            drawWaveform(ctx2, size2, history2, '#44ff88', false, []);
+            drawWaveform(ctx3, size3, history3, '#ff4444', true, envelopeHistory);
+
+            requestAnimationFrame(animate);
+        }
+
+        // ==================== 呼吸灯更新 ====================
+        function updateBreathCircle(envelope) {
+            const circle = document.getElementById('breathCircle');
+            const minSize = 40;
+            const maxSize = 120;
+            const ratio = envelope / (2 * A);
+            const size = minSize + (maxSize - minSize) * ratio;
+
+            const r = Math.floor(100 + 155 * ratio);
+            const g = Math.floor(100 * (1 - ratio));
+            const b = Math.floor(255 * (1 - ratio * 0.5));
+
+            circle.style.width = size + 'px';
+            circle.style.height = size + 'px';
+            circle.style.background = `radial-gradient(circle, rgba(${r},${g},${b},0.8), rgba(${r * 0.5},${g * 0.5},${b},0.3))`;
+            circle.style.boxShadow = '0 0 ' + (30 + 40 * ratio) + 'px rgba(' + r + ',' + g + ',' + b + ',0.5)';
+        }
+
+        // ==================== UI 更新 ====================
+        function updateUI() {
+            document.getElementById('f1Value').textContent = f1.toFixed(1) + ' Hz';
+            document.getElementById('f2Value').textContent = f2.toFixed(1) + ' Hz';
+            document.getElementById('aValue').textContent = A.toFixed(1);
+            document.getElementById('phiValue').textContent = phi.toFixed(2) + ' rad';
+
+            document.getElementById('f1Display').textContent = f1.toFixed(1);
+            document.getElementById('f2Display').textContent = f2.toFixed(1);
+            document.getElementById('phiDisplay').textContent = phi.toFixed(2);
+
+            const beatFreq = Math.abs(f2 - f1);
+            document.getElementById('beatDisplay').innerHTML =
+                `拍频 f<sub>beat</sub> = |f₂ - f₁| = ${beatFreq.toFixed(2)} Hz`;
+            document.getElementById('beatFreqDisplay').textContent = beatFreq.toFixed(2);
+
+            updateAudioFreq();
+        }
+
+        // ==================== 事件监听 ====================
+        document.getElementById('f1Slider').addEventListener('input', (e) => {
+            f1 = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('f2Slider').addEventListener('input', (e) => {
+            f2 = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('aSlider').addEventListener('input', (e) => {
+            A = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('phiSlider').addEventListener('input', (e) => {
+            phi = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            document.getElementById('playBtn').textContent = isPlaying ? '⏸ 暂停' : '▶ 播放';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            t = 0;
+            history1 = [];
+            history2 = [];
+            history3 = [];
+            envelopeHistory = [];
+            f1 = 5;
+            f2 = 6;
+            A = 1;
+            phi = 0;
+            document.getElementById('f1Slider').value = 5;
+            document.getElementById('f2Slider').value = 6;
+            document.getElementById('aSlider').value = 1;
+            document.getElementById('phiSlider').value = 0;
+            updateUI();
+        });
+
+        // 预设按钮
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                f1 = parseFloat(btn.dataset.f1);
+                f2 = parseFloat(btn.dataset.f2);
+                A = parseFloat(btn.dataset.a);
+                phi = parseFloat(btn.dataset.phi);
+                document.getElementById('f1Slider').value = f1;
+                document.getElementById('f2Slider').value = f2;
+                document.getElementById('aSlider').value = A;
+                document.getElementById('phiSlider').value = phi;
+                updateUI();
+            });
+        });
+
+        // 音频按钮
+        document.getElementById('audioBtn').addEventListener('click', () => {
+            if (isAudioOn) {
+                stopAudio();
+                document.getElementById('audioBtn').textContent = '🔊 开启双音听觉演示';
+                document.getElementById('audioStatus').textContent = '音频已关闭';
+            } else {
+                startAudio();
+                document.getElementById('audioBtn').textContent = '🔇 关闭双音听觉演示';
+                document.getElementById('audioStatus').textContent = `正在播放 f₁=${f1}Hz 和 f₂=${f2}Hz，拍频=${Math.abs(f2 - f1).toFixed(2)}Hz`;
+            }
+        });
+
+        // ==================== 启动 ====================
+        updateUI();
+        animate();
+    </script>
+</body>
+</html>

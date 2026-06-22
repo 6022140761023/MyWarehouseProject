@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓储管理系统 - 数据可视化仪表盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0f1923;
+            color: #e0e0e0;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+            border-bottom: 2px solid #1e3a4d;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, #00d4ff, #4ecdc4, #00d4ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+            100% { background-position: 0% center; }
+        }
+        .header p {
+            color: #6b8a9e;
+            margin-top: 8px;
+            font-size: 0.95em;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #162331, #1a2d3d);
+            border: 1px solid #1e3a4d;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15);
+        }
+        .stat-card .stat-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-card .stat-label {
+            font-size: 0.85em;
+            color: #6b8a9e;
+        }
+        .stat-card:nth-child(1) .stat-value { color: #00d4ff; }
+        .stat-card:nth-child(2) .stat-value { color: #4ecdc4; }
+        .stat-card:nth-child(3) .stat-value { color: #ff6b6b; }
+        .stat-card:nth-child(4) .stat-value { color: #ffaa00; }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .chart-panel {
+            background: linear-gradient(135deg, #162331, #1a2d3d);
+            border: 1px solid #1e3a4d;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .chart-panel.full-width {
+            grid-column: 1 / -1;
+        }
+        .chart-panel h3 {
+            color: #00d4ff;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #1e3a4d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-panel h3 .icon {
+            font-size: 1.2em;
+        }
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+        .chart-wrapper.tall {
+            height: 360px;
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .footer {
+            text-align: center;
+            color: #3a5a6e;
+            font-size: 0.8em;
+            padding: 20px 0;
+            border-top: 1px solid #1e3a4d;
+            margin-top: 10px;
+        }
+        @media (max-width: 900px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>仓储管理可视化仪表盘</h1>
+            <p>实时库存数据统计 · 柱状图 & 饼状图分析</p>
+        </div>
+
+        <div class="stats-row" id="statsRow"></div>
+
+        <div class="charts-grid">
+            <div class="chart-panel">
+                <h3><span class="icon">📊</span> 商品库存数量柱状图</h3>
+                <div class="chart-wrapper"><canvas id="barStock"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3><span class="icon">🥧</span> 类别库存占比饼状图</h3>
+                <div class="chart-wrapper"><canvas id="pieCategory"></canvas></div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-panel">
+                <h3><span class="icon">🥧</span> 供应商库存占比饼状图</h3>
+                <div class="chart-wrapper"><canvas id="pieSupplier"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3><span class="icon">⚠️</span> 库存预警对比柱状图</h3>
+                <div class="chart-wrapper"><canvas id="barWarning"></canvas></div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-panel full-width">
+                <h3><span class="icon">📦</span> 收发存汇总表 — 分组柱状图</h3>
+                <div class="chart-wrapper tall"><canvas id="barTrans"></canvas></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            仓储管理系统 · 数据可视化仪表盘 · Powered by Chart.js
+        </div>
+    </div>
+
+    <script>
+        // ==================== 数据占位符（由 Python 动态注入） ====================
+        __DATA_PLACEHOLDER__
+
+        // ==================== 辅助函数 ====================
+        function getCategoryName(catId) {
+            const cat = categories.find(c => c.id === catId);
+            return cat ? cat.categoryName : '未知类别';
+        }
+        function getSupplierName(supId) {
+            const sup = suppliers.find(s => s.id === supId);
+            return sup ? sup.supplierName : '未知供应商';
+        }
+
+        // ==================== 汇总统计 ====================
+        function buildStats() {
+            const totalProducts = products.length;
+            const totalStock = products.reduce((sum, p) => sum + p.quantity, 0);
+            const warningCount = products.filter(p => p.quantity < (p.minStock || 10)).length;
+            const catSet = new Set(products.map(p => p.categoryId));
+            const totalCategories = catSet.size;
+            return { totalProducts, totalStock, warningCount, totalCategories };
+        }
+
+        function renderStats() {
+            const stats = buildStats();
+            const container = document.getElementById('statsRow');
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalProducts}</div>
+                    <div class="stat-label">📋 商品总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalStock}</div>
+                    <div class="stat-label">📦 总库存量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.warningCount}</div>
+                    <div class="stat-label">⚠️ 库存预警项</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalCategories}</div>
+                    <div class="stat-label">🏷️ 类别数</div>
+                </div>
+            `;
+        }
+
+        // ==================== 公共 Chart 配置 ====================
+        Chart.defaults.color = '#aabbcc';
+        Chart.defaults.font.family = "'Microsoft YaHei', 'PingFang SC', sans-serif";
+        const colorPalette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+                              '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                              '#FF9F43', '#10AC84', '#EE5A24', '#0ABDE3', '#F368E0'];
+
+        // ==================== 1. 商品库存数量柱状图 ====================
+        function renderStockBar() {
+            const names = products.map(p => p.productName.length > 8 ? p.productName.slice(0,7) + '…' : p.productName);
+            const quantities = products.map(p => p.quantity);
+            const colors = products.map((_, i) => colorPalette[i % colorPalette.length]);
+
+            new Chart(document.getElementById('barStock'), {
+                type: 'bar',
+                data: {
+                    labels: names,
+                    datasets: [{
+                        label: '库存数量',
+                        data: quantities,
+                        backgroundColor: colors,
+                        borderColor: colors.map(c => c),
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `库存: ${ctx.raw} 件`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { callback: v => v + ' 件' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 2. 类别库存占比饼状图 ====================
+        function renderCategoryPie() {
+            const categoryStock = {};
+            products.forEach(p => {
+                const name = getCategoryName(p.categoryId);
+                categoryStock[name] = (categoryStock[name] || 0) + p.quantity;
+            });
+            const labels = Object.keys(categoryStock);
+            const data = Object.values(categoryStock);
+            const total = data.reduce((a, b) => a + b, 0);
+
+            new Chart(document.getElementById('pieCategory'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colorPalette.slice(0, labels.length),
+                        borderColor: '#0f1923',
+                        borderWidth: 2,
+                        hoverOffset: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 15, usePointStyle: true, pointStyleWidth: 10 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const pct = ((ctx.raw / total) * 100).toFixed(1);
+                                    return ` ${ctx.label}: ${ctx.raw} 件 (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 3. 供应商库存占比饼状图 ====================
+        function renderSupplierPie() {
+            const supplierStock = {};
+            products.forEach(p => {
+                const name = getSupplierName(p.supplierId);
+                supplierStock[name] = (supplierStock[name] || 0) + p.quantity;
+            });
+            const labels = Object.keys(supplierStock);
+            const data = Object.values(supplierStock);
+            const total = data.reduce((a, b) => a + b, 0);
+
+            new Chart(document.getElementById('pieSupplier'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colorPalette.slice(0, labels.length),
+                        borderColor: '#0f1923',
+                        borderWidth: 2,
+                        hoverOffset: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 15, usePointStyle: true, pointStyleWidth: 10 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const pct = ((ctx.raw / total) * 100).toFixed(1);
+                                    return ` ${ctx.label}: ${ctx.raw} 件 (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 4. 库存预警对比柱状图 ====================
+        function renderWarningBar() {
+            const names = products.map(p => p.productName.length > 8 ? p.productName.slice(0,7) + '…' : p.productName);
+            const currentStock = products.map(p => p.quantity);
+            const safeStock = products.map(p => p.minStock || 10);
+
+            new Chart(document.getElementById('barWarning'), {
+                type: 'bar',
+                data: {
+                    labels: names,
+                    datasets: [
+                        {
+                            label: '当前库存',
+                            data: currentStock,
+                            backgroundColor: currentStock.map((cur, i) => cur < (products[i].minStock || 10) ? '#ff6b6b' : '#4ecdc4'),
+                            borderRadius: 6,
+                            borderSkipped: false
+                        },
+                        {
+                            label: '安全库存阈值',
+                            data: safeStock,
+                            backgroundColor: 'rgba(255, 170, 0, 0.25)',
+                            borderColor: '#ffaa00',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            borderSkipped: false,
+                            type: 'line'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.dataset.label + ': ' + ctx.raw + ' 件'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { callback: v => v + ' 件' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 5. 收发存汇总分组柱状图 ====================
+        function renderTransBar() {
+            const inboundSum = {};
+            const outboundSum = {};
+            inboundRecords.forEach(r => {
+                inboundSum[r.product_id] = (inboundSum[r.product_id] || 0) + r.quantity;
+            });
+            outboundRecords.forEach(r => {
+                outboundSum[r.product_id] = (outboundSum[r.product_id] || 0) + r.quantity;
+            });
+
+            const names = products.map(p => p.productName);
+            const inData = products.map(p => inboundSum[p.id] || 0);
+            const outData = products.map(p => outboundSum[p.id] || 0);
+            const endData = products.map(p => (inboundSum[p.id] || 0) - (outboundSum[p.id] || 0));
+
+            new Chart(document.getElementById('barTrans'), {
+                type: 'bar',
+                data: {
+                    labels: names,
+                    datasets: [
+                        {
+                            label: '入库总数',
+                            data: inData,
+                            backgroundColor: '#4ecdc4',
+                            borderRadius: 5,
+                            borderSkipped: false
+                        },
+                        {
+                            label: '出库总数',
+                            data: outData,
+                            backgroundColor: '#ff6b6b',
+                            borderRadius: 5,
+                            borderSkipped: false
+                        },
+                        {
+                            label: '期末库存',
+                            data: endData,
+                            backgroundColor: '#45B7D1',
+                            borderRadius: 5,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.dataset.label + ': ' + ctx.raw + ' 件'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { callback: v => v + ' 件' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 启动渲染 ====================
+        renderStats();
+        renderStockBar();
+        renderCategoryPie();
+        renderSupplierPie();
+        renderWarningBar();
+        renderTransBar();
+    </script>
+</body>
+</html>
